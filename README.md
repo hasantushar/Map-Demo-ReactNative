@@ -9,3 +9,7 @@ Set up a simple app to test out various map functionalities of React Native
 
 - run `yarn start`
 - Download Expo app on your phone and scan the QR code.
+
+
+
+![Screenshot](/assets/screenshot.jpg)
