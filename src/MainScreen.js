@@ -1,20 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { View, SafeAreaView, Text, StyleSheet, TextInput, Button } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { SafeAreaView, Text, StyleSheet, TextInput, Button } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import {
-    Accuracy,
-    requestPermissionsAsync,
-    watchPositionAsync
-} from 'expo-location';
 import Modal from 'react-native-modal';
+import GetLocation from './GetLocation';
 
 const MainScreen = () => {
-    const [lat, setLat] = useState(null);
-    const [long, setLong] = useState(null);
-    const [err, setErr] = useState(null);
-    const [isModalVisible, setModalVisible] = useState(false);
-    const [name, setName] = useState("");
-    const [location, setLocation] = useState({
+    const initialLocation = {
         "coords": {
             "accuracy": 20,
             "altitude": 0,
@@ -25,30 +16,19 @@ const MainScreen = () => {
         },
         "mocked": false,
         "timestamp": 1599938018000,
-    });
-
-    const startWatching = async () => {
-        try {
-            await requestPermissionsAsync();
-            await watchPositionAsync({
-                accuracy: Accuracy.BestForNavigation,
-                timeInterval: 1000,
-                distanceInterval: 10
-            }, (location) => {
-                setLat(location.coords.latitude);
-                setLong(location.coords.longitude);
-                console.log(location);
-                setLocation(location);
-            });
-        } catch (e) {
-            setErr(e);
-            console.log(e);
-        }
     };
 
-    useEffect(() => {
-        startWatching();
-    }, []);
+    const [isModalVisible, setModalVisible] = useState(false);
+    const [name, setName] = useState("");
+    const [location, setLocation] = useState(initialLocation);
+
+    const callback = useCallback((location) => {
+        console.log(location);
+        setLocation(location);
+    }, [location]);
+
+
+    const [err] = GetLocation(callback);
 
     const toggleModal = () => {
         setModalVisible(!isModalVisible);
@@ -56,8 +36,8 @@ const MainScreen = () => {
 
     return (
         <SafeAreaView>
-            {err ? <Text>Please allow location services</Text> : null}
 
+            {err ? <Text style={styles.errorText} > Please allow location services, reload the app if this text stays after enabling. The map should go fullscreen after reloading</Text> : null}
 
             <MapView
                 style={styles.map}
@@ -72,6 +52,7 @@ const MainScreen = () => {
                     longitudeDelta: 0.01
                 }}
             >
+
                 <Marker
                     onPress={toggleModal}
                     key={'current'}
@@ -85,15 +66,14 @@ const MainScreen = () => {
 
             <Modal
                 isVisible={isModalVisible}
-                onBackdropPress={() => setModalVisible(false)}
-                onSwipeComplete={() => setModalVisible(false)}
+                onBackdropPress={toggleModal}
+                onSwipeComplete={toggleModal}
                 swipeDirection="down"
                 backdropOpacity={0.01}
                 hideModalContentWhileAnimating={true}
-
+                onBackButtonPress={toggleModal}
             >
-                <View style={styles.modal}>
-
+                <SafeAreaView style={styles.modal}>
                     <TextInput
                         autoCapitalize='none'
                         autoCorrect={false}
@@ -111,18 +91,15 @@ const MainScreen = () => {
                         value={`LatLong: ${location.coords.latitude} , ${location.coords.longitude}`}
 
                     />
-
-
                     <Button title="Send to Console" onPress={() => {
                         console.log(`Name: ${name}`);
                         console.log(`Latitude: ${location.coords.latitude}`);
                         console.log(`Longitude: ${location.coords.longitude}`);
+                        setName("");
                         toggleModal();
                     }} />
-                </View>
+                </SafeAreaView>
             </Modal>
-
-
 
         </SafeAreaView>
     );
@@ -132,10 +109,13 @@ const styles = StyleSheet.create({
     map: {
         height: 800
     },
+    errorText: {
+        fontSize: 12,
+        color: 'red',
+        marginTop: 30,
+    },
     modal: {
         width: 350,
-        //borderWidth: 3,
-        //borderColor: 'red',
         marginTop: 200,
         alignSelf: 'center',
         borderRadius: 10
@@ -150,8 +130,6 @@ const styles = StyleSheet.create({
         height: 30,
         borderRadius: 5,
         marginHorizontal: 15,
-        //flexDirection: 'row',
-        //alignItems: 'center',
         marginBottom: 10
     }
 });
